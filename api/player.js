@@ -1,34 +1,34 @@
 export default function handler(req, res) {
-  // Extract all possible YouTube parameters from the URL
-  const { 
-    id, 
-    autoplay = 0, 
-    controls = 1, 
-    loop = 0, 
-    modest = 0, 
-    start, 
-    end,
-    mute = 0 
-  } = req.query;
+  // Destructure all possible YouTube parameters from the URL
+  const { id, ...params } = req.query;
 
   if (!id) {
-    return res.status(400).send("Error: Missing 'id' parameter.");
+    return res.status(400).send("Provide a YouTube ID: ?id=VIDEO_ID");
   }
 
-  // Construct the official YouTube Embed URL
-  let ytUrl = `https://www.youtube.com/embed/${id}?autoplay=${autoplay}&controls=${controls}&modestbranding=${modest}&mute=${mute}`;
+  // Convert all extra URL parameters into a YouTube string
+  // This lets you use ANY YouTube setting (e.g., &controls=0&mute=1)
+  const searchParams = new URLSearchParams(params);
   
-  if (loop == 1) ytUrl += `&loop=1&playlist=${id}`;
-  if (start) ytUrl += `&start=${start}`;
-  if (end) ytUrl += `&end=${end}`;
+  // YouTube requires 'playlist' to be set to the same ID for looping to work
+  if (params.loop === '1' && !params.playlist) {
+    searchParams.append('playlist', id);
+  }
 
-  // Return a clean HTML page with the player
+  const ytUrl = `https://www.youtube.com/embed/${id}?${searchParams.toString()}`;
+
   const html = `
-    <body style="margin:0;background:#000;">
-      <iframe width="100%" height="100%" src="${ytUrl}" 
-        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
-      </iframe>
-    </body>
+    <!DOCTYPE html>
+    <html style="margin:0;padding:0;height:100%;width:100%;overflow:hidden;">
+      <body style="margin:0;padding:0;height:100%;width:100%;background:#000;">
+        <iframe 
+          src="${ytUrl}" 
+          style="border:none;width:100vw;height:100vh;" 
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
+          allowfullscreen>
+        </iframe>
+      </body>
+    </html>
   `;
 
   res.setHeader('Content-Type', 'text/html');
